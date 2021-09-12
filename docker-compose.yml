@@ -1,0 +1,200 @@
+
+version: '3.9'
+
+services:
+#  mariadb:
+#    image: mariadb/server:10.5
+#    container_name: mariadb
+##    restart: unless-stopped
+#    environment:
+#      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+#      MYSQL_DATABASE: ha_db
+#      MYSQL_USER: home-assistant
+#      MYSQL_PASSWORD: "${HA_MYSQL_PASSWORD}"
+##    user: "1000:1000"
+#    volumes:
+#      # Local path where the database will be stored.
+#      - ./mysql:/var/lib/mysql:rw
+#    ports:
+#      - "3306:3306"
+  mariadb:
+    image: 'mariadb/server:10.3'
+    #    build: images/mariadb
+    container_name: mariadb
+    hostname: db.hass
+    environment:
+      - MARIADB_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}"
+      - MYSQL_DATABASE="${HA_MYSQL_DB}"
+      - MYSQL_USER="${HA_MYSQL_USER}"
+      - MYSQL_PASSWORD="${HA_MYSQL_PASSWORD}"
+#    environment:
+#      - MARIADB_ROOT_PASSWORD=root
+#      - MYSQL_DATABASE=homeassistant
+#      - MYSQL_USER=hass_user
+#      - MYSQL_PASSWORD=hass_pass
+#    volumes:
+#      - ${PWD}/mariadb:/var/lib/mysql
+
+    ports:
+      - '3306:3306'
+
+##    image: mariadb/server:10.3
+#    build: images/mariadb
+#    container_name: mariadb
+#    hostname: hass_db
+##    network_mode: host
+##    networks:
+##      homeass:
+##        ipv4_address: 172.20.0.10
+#    environment:
+#      - MARIADB_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}"
+#      - MYSQL_DATABASE="${HA_MYSQL_DB}"
+#      - MYSQL_USER="${HA_MYSQL_USER}"
+#      - MYSQL_PASSWORD="${HA_MYSQL_PASSWORD}"
+#    ports:
+#
+#      - '127.0.0.1:3306:3306'
+    #    restart: on-failure
+#    volumes:
+#      - ${PWD}/mariadb:/var/lib/mysql
+  # Deconz
+#  deconz:
+#    container_name: deconz
+#    image: marthoc/deconz
+#    restart: unless-stopped
+#    network_mode: host
+#    environment:
+#      # You can access Deconz at this port
+#      DECONZ_WEB_PORT: 8080
+#      DECONZ_WS_PORT: 8088
+#
+#      # Set VNC_MODE to 0 to disable it completely
+#      DECONZ_VNC_MODE: 1
+#      DECONZ_VNC_PORT: 5900
+#      DECONZ_VNC_PASSWORD: "${VNC_PASSWORD}"
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro
+#      - /etc/timezone:/etc/timezone:ro
+#      # Replace <local path> with a path where all deconz config will be stored.
+#      - deconz:/root/.local/share/dresden-elektronik/deCONZ
+#    devices:
+#      - "/dev/ttyUSB0:/dev/ttyUSB0"
+
+  homeassistant:
+#    image: homeassistant/home-assistant
+    build:
+
+
+      context: images/home-assistant
+      args:
+        - DB_HOST="loclahost"
+        - DB_USER="${HA_MYSQL_USER}"
+        - DB_PASS="${HA_MYSQL_PASSWORD}"
+        - DB_NAME="${HA_MYSQL_DB}"
+
+    container_name: home-assistant
+    hostname: hass.hass
+    links:
+      - "mariadb:db_hass"
+    volumes:
+      # Local path where your home assistant config will be stored
+      - ./home_assistant_config:/config
+      - ./home_assistant_config/configuration.yaml:/config/configuration.yaml
+      - ./home_assistant_config/scenes.yaml:/config/scenes.yaml
+      - ./home_assistant_config/scripts.yaml:/config/scripts.yaml
+      - ./home_assistant_config/secrets.yaml:/config/secrets.yaml
+      - ./home_assistant_config/groups.yaml:/config/groups.yaml
+      - ./home_assistant_config/automations.yaml:/config/automations.yaml
+      - /etc/localtime:/etc/localtime:ro
+#    restart: unless-stopped
+#    network_mode: host
+    depends_on:
+      # MariaDB is optional (only if you would like to use a different database for HA).
+      - mariadb
+      # Deconz is optional (only if you use the deconz Zigbee hub).
+#      - deconz
+    environment:
+      - PUID=1000
+      - PGID=1000
+
+
+  # Node-RED
+#  nodered:
+#    container_name: nodered
+#    image: nodered/node-red-docker:slim-v10
+#    ports:
+#      - "1880:1880"
+#    volumes:
+#      # Local path where all Node-RED config will be stored.
+#      - ./nodered:/data
+#    depends_on:
+#      - homeassistant
+#    environment:
+#      TZ: "Europe/Dublin"
+#    user: "${LOCAL_USER}:${LOCAL_GROUP}"
+#    restart: unless-stopped
+
+
+  # AppDaemon
+#  appdaemon:
+#    container_name: appdaemon
+#    restart: unless-stopped
+#    image: acockburn/appdaemon:latest
+#    environment:
+#      HA_URL: "http://${SERVER_IP}:8123"
+#      TOKEN: "${HA_APPDAEMON_KEY}"
+#      DASH_URL: "http://${SERVER_IP}:5050"
+#    ports:
+#      - "5050:5050"
+#    volumes:
+#      # Set which local directory will contain all your app daemon configuration
+#      - appdaemon:/conf
+#    depends_on:
+#      - homeassistant
+#    user: "${LOCAL_USER}:${LOCAL_GROUP}"
+
+
+
+  hass-configurator:
+    image: "causticlab/hass-configurator-docker:latest"
+    container_name: hass-configurator
+#    restart: unless-stopped
+    ports:
+      - "3218:3218/tcp"
+    depends_on:
+      - homeassistant
+    volumes:
+      - "./configurator-config:/config"
+      - "./hass-config:/hass-config"
+      - "./hass-run:/run"
+    user: "${LOCAL_USER}:${LOCAL_GROUP}"
+
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
+    volumes:
+      - ./sonarr/data:/config
+      - ./sonarr/tvseries:/tv #optional
+      - ./sonarr/downloadclient-downloads:/downloads #optional
+    ports:
+      - 8989:8989
+    user: "${LOCAL_USER}:${LOCAL_GROUP}"
+#    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.12
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "1884:1884"
+    volumes:
+      - "./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf"
+#      - "./mosquitto/data:/mosquitto/data"
+#      - "./mosquitto/log:/mosquitto/log"
+    environment:
+      - TZ=Europe/Dublin
+    user: "${LOCAL_USER}:${LOCAL_GROUP}"

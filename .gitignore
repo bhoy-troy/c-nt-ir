@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+!/mariadb/
+/mosquitto/
+/mariadb/
+/nodered/
+/sonarr/
+/home_assistant_config/.cloud/
+/home_assistant_config/.storage/
+/home_assistant_config/blueprints/
+/home_assistant_config/deps/
+/home_assistant_config/tts/
+/home_assistant_config/.HA_VERSION
+/home_assistant_config/home-assistant.log
+/home_assistant_config/home-assistant.log.1
