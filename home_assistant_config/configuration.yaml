@@ -11,5 +11,12 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
+
+camera:
+  name: Paulus
+  platform: generic
+  still_image_url: https://maps.googleapis.com/maps/api/staticmap?center={{ state_attr('device_tracker.demo_paulus', 'latitude') }},{{ state_attr('device_tracker.demo_paulus', 'longitude') }}&zoom=13&size=500x500&maptype=roadmap&markers=color:blue%7Clabel:P%7C{{ state_attr('device_tracker.demo_paulus', 'latitude') }},{{ state_attr('device_tracker.demo_paulus', 'longitude') }}&key=YOUR_API_KEY
+  limit_refetch_to_url_change: true
+
 recorder:
   db_url: mysql://hass_user:hass_pass@db.hass/homeassistant

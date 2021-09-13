@@ -9,3 +9,7 @@
 /home_assistant_config/tts/
 /home_assistant_config/.HA_VERSION
 /home_assistant_config/home-assistant.log*
+/influxdb/
+/grafana/
+/transmission/
+/plex/

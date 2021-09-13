@@ -8,6 +8,17 @@ My Home automation set up
 * __hass-configurator__, a filesystem-browser and text-editor for your configuration files.
 
 
+
+### Volumes
+
+    docker volume create --name=james-troy_nginx_ssl 
+    docker volume create --name=james-troy_certbot_certs
+    
+### Clean Containers
+
+    docker rm -f $(docker ps -a -q)
+   
+   
 ##### What's cúntóir?
 
 Cúntóir is the Irish for assistant
