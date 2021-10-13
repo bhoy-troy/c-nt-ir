@@ -13,6 +13,14 @@ My Home automation set up
 
     docker volume create --name=james-troy_nginx_ssl 
     docker volume create --name=james-troy_certbot_certs
+ 
+ 
+#### HACS
+
+https://experiencelovelace.github.io/ha-floorplan/docs/quick-start/
+
+    docker exec -it home-assistant bash
+    wget -O - https://get.hacs.xyz | bash -
     
 ### Clean Containers
 

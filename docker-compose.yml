@@ -53,13 +53,13 @@ services:
       - "mariadb:db_hass"
     volumes:
       # Local path where your home assistant config will be stored
-      - ./home_assistant_config:/config
-      - ./home_assistant_config/configuration.yaml:/config/configuration.yaml
-      - ./home_assistant_config/scenes.yaml:/config/scenes.yaml
-      - ./home_assistant_config/scripts.yaml:/config/scripts.yaml
-      - ./home_assistant_config/secrets.yaml:/config/secrets.yaml
-      - ./home_assistant_config/groups.yaml:/config/groups.yaml
-      - ./home_assistant_config/automations.yaml:/config/automations.yaml
+      - ./config/home_assistant:/config
+      - ./config/home_assistant/configuration.yaml:/config/configuration.yaml
+      - ./config/home_assistant/scenes.yaml:/config/scenes.yaml
+      - ./config/home_assistant/scripts.yaml:/config/scripts.yaml
+      - ./config/home_assistant/secrets.yaml:/config/secrets.yaml
+      - ./config/home_assistant/groups.yaml:/config/groups.yaml
+      - ./config/home_assistant/automations.yaml:/config/automations.yaml
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -71,8 +71,9 @@ services:
       # Deconz is optional (only if you use the deconz Zigbee hub).
 #      - deconz
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
     ports:
       - '8123:8123'
 
@@ -127,29 +128,59 @@ services:
 #      - "./hass-run:/run"
 #    user: "${LOCAL_USER}:${LOCAL_GROUP}"
 #
+#  plex:
+#    container_name: plex
+#    image: plexinc/pms-docker
+##    restart: unless-stopped
+#    ports:
+#      - 32400:32400/tcp
+#      - 3005:3005/tcp
+#      - 8324:8324/tcp
+#      - 32469:32469/tcp
+#      - 1900:1900/udp
+#      - 32410:32410/udp
+#      - 32412:32412/udp
+#      - 32413:32413/udp
+#      - 32414:32414/udp
+#    environment:
+#      TZ: "Europe/Dublin"
+#      PLEX_CLAIM: 'claimToken'
+#      ADVERTISE_IP: 'http://127.0.0.1:32400/'
+#    hostname: plex.hass
+#    volumes:
+#      - './plex/config:/config'
+#      - './plex/transcode:/transcode'
+#      - './plex/media:/data'
+  ## plex
   plex:
+    image: hotio/plex
     container_name: plex
-    image: plexinc/pms-docker
-#    restart: unless-stopped
-    ports:
-      - 32400:32400/tcp
-      - 3005:3005/tcp
-      - 8324:8324/tcp
-      - 32469:32469/tcp
-      - 1900:1900/udp
-      - 32410:32410/udp
-      - 32412:32412/udp
-      - 32413:32413/udp
-      - 32414:32414/udp
-    environment:
-      TZ: "Europe/Dublin"
-      PLEX_CLAIM: 'claimToken'
-      ADVERTISE_IP: 'http://127.0.0.1:32400/'
     hostname: plex.hass
+    restart: unless-stopped
     volumes:
-      - './plex/config:/config'
-      - './plex/transcode:/transcode'
-      - './plex/media:/data'
+      - './config/plex:/config'
+      - './data/plex:/data'
+      - './transcode/plex:/transcode'
+
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    hostname: radarr.hass
+    ports:
+      - "7878:7878" # port mapping
+    volumes:
+      - "./config/radarr:/config" # config directory for radarr
+      - "./storage/downloads/complete:/downloads" # completed downloads directory from sab
+      - "./storage/movies:/storage/Movies" # where radarr will copy your movies. add as many of these as you need
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
 
   sonarr:
     image: ghcr.io/linuxserver/sonarr
@@ -160,27 +191,62 @@ services:
       - PGID=${LOCAL_GROUP}
       - TZ=Europe/Dublin
     volumes:
-      - "./sonarr/data:/config:rw"
-      - "./sonarr/tvseries:/tv" #optional
-      - "./sonarr/downloadclient-downloads:/downloads" #optional
+      - "./config/sonarr:/config" # sonarr config dir
+      - "./storage/downloads/complete:/downloads" # your completed downloads directory from sab
+      - "./storage/tv:/storage/TV" # where it will copy your files when done. add as many of these as you need
     ports:
       - 8989:8989
 ##    restart: unless-stopped
 
+  ## SABnzbd
+  sabnzbd:
+    image: hotio/sabnzbd
+    container_name: sabnzbd
+    hostname: sabnzbd.hass
+    volumes:
+      - "./config/sabnzbd:/config" # sab config directory
+      - "./storage/downloads/complete:/downloads" # completed directory for downloads. this contains the category directories
+      - "./downloads/incomplete:/incomplete-downloads" # "temp" directory for downloads
+    ports:
+      - "8080:8080"
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
+
+
+  jackett:
+    image: linuxserver/jackett
+    container_name: jackett
+
+    hostname: jackett.hass
+#    restart: unless-stopped
+    ports:
+      - 9117:9117
+    volumes:
+      - ./config/jackett:/config
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
+
+
   mosquitto:
-    image: eclipse-mosquitto:2.0.12
+    image: library/eclipse-mosquitto:latest
     container_name: mosquitto
     hostname: mqtt.hass
     ports:
       - "1883:1883"
       - "1884:1884"
     volumes:
-      - "./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf"
-      - "./mosquitto/data:/mosquitto/data"
-      - "./mosquitto/log:/mosquitto/log"
+      - "./config/mosquitto:/mosquitto/config"
+      - "./data/mosquitto:/mosquitto/data"
+      - "./log/mosquitto:/mosquitto/log"
     environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
       - TZ=Europe/Dublin
-    user: "${LOCAL_USER}:${LOCAL_GROUP}"
+#    user: "${LOCAL_USER}:${LOCAL_GROUP}"
 
 #  traefik:
 #    image: library/traefik:v1.7.30-alpine
@@ -213,9 +279,10 @@ services:
     ports:
       - 8086:8086
     volumes:
-      - ./influxdb/data:/var/lib/influxdb2
-      - ./influxdb/conf:/etc/influxdb2
+      - ./data/influxdb:/var/lib/influxdb2
+      - ./config/influxdb:/etc/influxdb2
     hostname: influxdb.hass
+
   #    restart: always
 
   grafana:
@@ -226,7 +293,7 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./grafana:/var/lib/grafana
+      - ./data/grafana:/var/lib/grafana
     environment:
       GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource,percona-percona-app"
       GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER}"
@@ -249,7 +316,7 @@ services:
 #      - /dev/dri/card0
 #    volumes:
 #      - /etc/localtime:/etc/localtime:ro
-#      - ./home_assistant_config/frigate.yaml:/config/config.yml:ro
+#      - ./config/home_assistant/frigate.yaml:/config/config.yml:ro
 #      - ./frigate:/media/frigate
 #      - type: tmpfs
 #        target: /tmp/cache
@@ -271,47 +338,47 @@ services:
 #      - frigate.env
 
 
-  nginx:
-    build: images/nginx
-#    image: jtroy/nginx
-#    container_name: nginx
-    env_file:
-      - ./config.env
-    volumes:
-      - james-troy_nginx_ssl:/etc/nginx/ssl
-      - james-troy_certbot_certs:/etc/letsencrypt
-      - home_james-troy_com_certbot:/var/www/certbot/test1.james-troy.com
-      - hass_james-troy_com_certbot:/var/www/certbot/test2.james-troy.com
-      - ./html:/var/www/html/home.james-troy.com
-      - ./html:/var/www/html/hass.james-troy.com
-    ports:
-      - "80:80"
-      - "443:443"
+#  nginx:
+#    build: images/nginx
+##    image: jtroy/nginx
+##    container_name: nginx
+#    env_file:
+#      - ./config.env
+#    volumes:
+#      - james-troy_nginx_ssl:/etc/nginx/ssl
+#      - james-troy_certbot_certs:/etc/letsencrypt
+#      - home_james-troy_com_certbot:/var/www/certbot/test1.james-troy.com
+#      - hass_james-troy_com_certbot:/var/www/certbot/test2.james-troy.com
+#      - ./html:/var/www/html/home.james-troy.com
+#      - ./html:/var/www/html/hass.james-troy.com
+#    ports:
+#      - "80:80"
+#      - "443:443"
 #    restart: always
 
-  certbot:
-    build: images/certbot
-#    image: jtroy/certbot
-    env_file:
-      - ./config.env
-    volumes:
-      - james-troy_certbot_certs:/etc/letsencrypt
-      - home_james-troy_com_certbot:/var/www/certbot/test1.james-troy.com
-      - hass_james-troy_com_certbot:/var/www/certbot/test2.james-troy.com
-    depends_on:
-      - nginx
-
-  cron:
-    build: images/cron
-#    image: james-troy/cron
-    environment:
-      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME}"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./:/workdir:ro
-    depends_on:
-      - nginx
-      - certbot
+#  certbot:
+#    build: images/certbot
+##    image: jtroy/certbot
+#    env_file:
+#      - ./config.env
+#    volumes:
+#      - james-troy_certbot_certs:/etc/letsencrypt
+#      - home_james-troy_com_certbot:/var/www/certbot/test1.james-troy.com
+#      - hass_james-troy_com_certbot:/var/www/certbot/test2.james-troy.com
+##    depends_on:
+#      - nginx
+#
+#  cron:
+#    build: images/cron
+##    image: james-troy/cron
+#    environment:
+#      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME}"
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#      - ./:/workdir:ro
+#    depends_on:
+#      - nginx
+#      - certbot
 
   agent:
     image: portainer/agent
@@ -338,7 +405,8 @@ services:
       - "9000:9000"
       - "8000:8000"
     volumes:
-      - portainer_data:/data
+      - ./data/portainer:/data
+      - /var/run/docker.sock:/var/run/docker.sock
 #    networks:
 #      - agent_network
     deploy:
@@ -346,12 +414,19 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == manager]
+#    restart: unless-stopped
+    environment:
+      - PUID=${LOCAL_USER}
+      - PGID=${LOCAL_GROUP}
+      - TZ=Europe/Dublin
+
 
   speedtest:
     image: atribe/speedtest-for-influxdb-and-grafana
     container_name: speedtest
+
     volumes:
-      - ./config.ini:/src/config.ini
+      - ./config/speedtest/config.ini:/src/config.ini
     #    restart: always
     depends_on:
       - influxdb
@@ -371,13 +446,52 @@ services:
 #      - WHITELIST=iplist #optional
 #      - HOST_WHITELIST=dnsnane list #optional
     volumes:
-      - ./transmission/config:/config
-      - ./transmission/downloads:/downloads
-      - ./transmission/watch:/watch
+      - "./config/transmission:/config" # sab config directory
+      - "./storage/downloads:/downloads/complete" # completed directory for downloads. this contains the category directories
+      - "./downloads/incomplete:/downloads/incomplete" # "temp" directory for downloads
     ports:
       - 9091:9091
       - 51413:51413
       - 51413:51413/udp
+#    restart: unless-stopped
+
+  adguard:
+    image: adguard/adguardhome
+    container_name: adguard
+    hostname: adguard.hass
+#    restart: unless-stopped
+    volumes:
+      - './adguard/work:/opt/adguardhome/work'
+      - './adguard/conf:/opt/adguardhome/conf'
+    ports:
+      - '53:53/tcp'
+      - '53:53/udp'
+      - '67:67/udp'
+#      - '68:68/udp'
+      - '9080:80/tcp'
+      - '9443:443/tcp'
+      - '9443:443/udp'
+      - '3001:3000/tcp'
+#      - '853:853/tcp'
+#      - '784:784/udp'
+#      - '853:853/udp'
+#      - '8853:8853/udp'
+#      - '5443:5443/tcp'
+#      - '5443:5443/udp'
+
+# Visual Studio code
+  vscode:
+    container_name: vscode
+    image: codercom/code-server
+    hostname: vscode.hass
+    volumes:
+      - ./data/vscode:/home/coder/.local/share/code-server
+      - ./data/vscode/project:/home/coder/project
+    ports:
+      - "8280:8080"
+    command: code-server --auth password --disable-telemetry /home/coder/project
+    environment:
+      PASSWORD: "${VSCODE_PASSWORD}"
 #    restart: unless-stopped
 
 

@@ -13,3 +13,9 @@
 /grafana/
 /transmission/
 /plex/
+/config/home_assistant/home-assistant.log
+/config/home_assistant/home-assistant.log.1
+/storage/
+/transcode/
+/downloads/
+/log/
