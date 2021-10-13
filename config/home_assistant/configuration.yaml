@@ -20,3 +20,27 @@ camera:
 
 recorder:
   db_url: mysql://hass_user:hass_pass@db.hass/homeassistant
+
+# Example configuration.yaml entry
+sabnzbd:
+  api_key: SABNZBD_API_KEY
+  host: sabnzbd.hass # 192.168.1.32
+  path: /sabnzbd
+  name: sab
+  port: 9090
+#  ssl: true
+  sensors:
+    - current_status
+    - speed
+    - queue_size
+    - queue_remaining
+    - disk_size
+    - disk_free
+    - queue_count
+    - day_size
+    - week_size
+    - month_size
+    - total_size
+
+hacs:
+  token: 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
